@@ -29,7 +29,22 @@ const prompt = ai.definePrompt({
   name: 'generateCircuitFromDescriptionPrompt',
   input: {schema: GenerateCircuitFromDescriptionInputSchema},
   output: {schema: GenerateCircuitFromDescriptionOutputSchema},
-  prompt: `You are a quantum circuit design assistant.  You will generate a quantum circuit diagram, as QASM 2.0 code, based on a natural language description of the desired circuit functionality. Ensure the output is valid QASM 2.0.
+  prompt: `You are a quantum circuit design assistant. Your task is to generate a quantum circuit diagram, as QASM 2.0 code, based on a natural language description of the desired circuit functionality.
+
+You MUST adhere to the following strict QASM 2.0 format:
+1. Start with 'OPENQASM 2.0;'.
+2. Include the standard library with 'include "qelib1.inc";'.
+3. Declare the quantum register using 'qreg q[n];', where 'n' is the number of qubits.
+4. Declare the classical register using 'creg c[n];', where 'n' is the same number of qubits. The classical register must have the same size as the quantum register.
+5. Do not use 'qubit q[n];'. Always use 'qreg q[n];'.
+
+Example for a 2-qubit circuit:
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+creg c[2];
+h q[0];
+cx q[0],q[1];
 
 Description: {{{description}}}
 `,

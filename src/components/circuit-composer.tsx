@@ -178,13 +178,12 @@ const calculateQubitStateFromDensityMatrix = (rho: Matrix): { theta: number, phi
 
 export default function CircuitComposer() {
   const [circuit, setCircuit] = useState<CircuitState>({
-    qubits: 3,
+    qubits: 2,
     timesteps: 25,
     gates: [],
   });
   const [editorCode, setEditorCode] = useState('');
   const [editorLanguage, setEditorLanguage] = useState<EditorLanguage>('qasm');
-  const [isTyping, setIsTyping] = useState(false);
   
   const { toast } = useToast();
 
@@ -197,28 +196,42 @@ export default function CircuitComposer() {
   const [probabilityData, setProbabilityData] = useState<Array<{ name: string; probability: number; fill: string }>>([]);
   const [densityMatrix, setDensityMatrix] = useState<Matrix>([[{ re: 1, im: 0 }, { re: 0, im: 0 }], [{ re: 0, im: 0 }, { re: 0, im: 0 }]]);
 
+  // Effect to sync editor FROM circuit changes
+  useEffect(() => {
+    let newCode;
+    if (editorLanguage === 'qasm') {
+      newCode = circuitToQasm(circuit);
+    } else {
+      newCode = circuitToQiskit(circuit);
+    }
+    // Only update if the code is actually different, to avoid overwriting user edits
+    if (newCode !== editorCode) {
+      setEditorCode(newCode);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [circuit, editorLanguage]);
 
-  const updateCircuitAndVisualizations = useCallback((newCircuit: CircuitState, fromEditor = false) => {
-    setCircuit(newCircuit);
 
-    const stateVector = calculateStateVector(newCircuit);
+  // Effect to update visualizations when the circuit changes
+  useEffect(() => {
+    const stateVector = calculateStateVector(circuit);
   
     // Update visualizations
     const probabilities = stateVector.map(c => c.re * c.re + c.im * c.im);
     const colors = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
-    setProbabilityData(Array.from({ length: 2 ** newCircuit.qubits }, (_, i) => ({
-      name: `|${i.toString(2).padStart(newCircuit.qubits, '0')}⟩`,
+    setProbabilityData(Array.from({ length: 2 ** circuit.qubits }, (_, i) => ({
+      name: `|${i.toString(2).padStart(circuit.qubits, '0')}⟩`,
       probability: probabilities[i] || 0,
       fill: colors[i % colors.length],
     })));
   
-    const currentSelectedQubit = selectedQubit === null || selectedQubit >= newCircuit.qubits ? 0 : selectedQubit;
+    const currentSelectedQubit = selectedQubit === null || selectedQubit >= circuit.qubits ? 0 : selectedQubit;
     
-    if (newCircuit.qubits > 0) {
-      if (selectedQubit !== null && selectedQubit >= newCircuit.qubits) {
+    if (circuit.qubits > 0) {
+      if (selectedQubit !== null && selectedQubit >= circuit.qubits) {
         setSelectedQubit(0);
       }
-      const dm = calculateDensityMatrix(stateVector, newCircuit.qubits, currentSelectedQubit);
+      const dm = calculateDensityMatrix(stateVector, circuit.qubits, currentSelectedQubit);
       setDensityMatrix(dm);
       setBlochState(calculateQubitStateFromDensityMatrix(dm));
     } else {
@@ -226,54 +239,34 @@ export default function CircuitComposer() {
       setDensityMatrix([[{ re: 1, im: 0 }, { re: 0, im: 0 }], [{ re: 0, im: 0 }, { re: 0, im: 0 }]]);
       setBlochState({ theta: 0, phi: 0 });
     }
-    
-    // Sync editor unless the update came from the editor itself
-    if (!fromEditor) {
+  }, [circuit, selectedQubit]);
+
+  // Handle syncing circuit FROM editor changes
+  const handleCodeChange = (code: string) => {
+    // This just updates the local state of the editor.
+    setEditorCode(code);
+  };
+
+  const syncCircuitFromCode = () => {
+    // When the user clicks away, parse the code and update the circuit.
+    try {
+      let newCircuitState;
       if (editorLanguage === 'qasm') {
-          setEditorCode(circuitToQasm(newCircuit));
+        newCircuitState = qasmToCircuit(editorCode, circuit);
       } else {
-          setEditorCode(circuitToQiskit(newCircuit));
+        newCircuitState = qiskitToCircuit(editorCode, circuit);
       }
+      
+      const fullNewCircuit = {
+        ...circuit,
+        ...newCircuitState,
+      };
+      setCircuit(fullNewCircuit);
+    } catch (error) {
+      console.error("Code parsing error:", error);
+      toast({ title: `${editorLanguage.toUpperCase()} Error`, description: "Could not parse code.", variant: "destructive" });
     }
-  }, [selectedQubit, editorLanguage]);
-
-
-  // Effect to handle all circuit updates and sync visualizations
-  useEffect(() => {
-    // This effect now primarily reacts to changes in circuit, selectedQubit, or editorLanguage
-    // and calls the consolidated update function.
-    updateCircuitAndVisualizations(circuit);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [circuit, selectedQubit, editorLanguage]);
-
-  // Effect to handle changes from editor
-  useEffect(() => {
-    if (!isTyping) return;
-    const handler = setTimeout(() => {
-      try {
-        let newCircuitState;
-        if (editorLanguage === 'qasm') {
-          newCircuitState = qasmToCircuit(editorCode, circuit);
-        } else {
-          newCircuitState = qiskitToCircuit(editorCode, circuit);
-        }
-        const fullNewCircuit = {
-          ...circuit,
-          ...newCircuitState, 
-          gates: newCircuitState.gates?.map(g => ({...g, id: uuidv4()})) || [] 
-        };
-        // We call updateCircuitAndVisualizations directly to avoid loops and keep the editor in sync
-        updateCircuitAndVisualizations(fullNewCircuit, true); 
-      } catch (error) {
-        console.error("Code parsing error:", error);
-        toast({ title: `${editorLanguage.toUpperCase()} Error`, description: "Could not parse code.", variant: "destructive" });
-      }
-    }, 500); // Debounce time
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [editorCode, isTyping, toast, editorLanguage, circuit, updateCircuitAndVisualizations]);
+  };
 
 
   const handleSelectQubit = (qubitIndex: number | null) => {
@@ -285,7 +278,7 @@ export default function CircuitComposer() {
         toast({ title: 'Limit Reached', description: 'A maximum of 5 qubits is allowed for this demo.', variant: 'destructive' });
         return;
     }
-    setCircuit(c => ({ ...c, qubits: c.qubits + 1 }));
+    setCircuit(c => ({ ...c, qubits: c.qubits + 1, gates: c.gates.filter(g => g.qubit < c.qubits + 1 && (g.targetQubit === undefined || g.targetQubit < c.qubits + 1))}));
   };
 
   const removeQubit = () => {
@@ -382,9 +375,19 @@ export default function CircuitComposer() {
     e.preventDefault();
   };
   
-  const handleCircuitUpdateFromAI = (newCircuit: CircuitState) => {
-    handleSelectQubit(null);
-    updateCircuitAndVisualizations(newCircuit);
+  const handleCircuitUpdateFromAI = (qasmCode: string) => {
+    try {
+        const newCircuitState = qasmToCircuit(qasmCode, circuit);
+        setCircuit(c => ({
+            ...c, 
+            qubits: newCircuitState.qubits ?? c.qubits,
+            timesteps: newCircuitState.timesteps ?? c.timesteps,
+            gates: newCircuitState.gates ?? c.gates
+        }));
+    } catch (error) {
+        console.error("AI circuit update failed:", error);
+        toast({ title: "AI Error", description: "Could not apply the generated circuit.", variant: "destructive" });
+    }
   }
 
   return (
@@ -433,8 +436,8 @@ export default function CircuitComposer() {
         <div className="xl:col-span-1 flex flex-col gap-4">
             <QasmEditor 
                 code={editorCode} 
-                setCode={setEditorCode} 
-                setIsTyping={setIsTyping}
+                onCodeChange={handleCodeChange} 
+                onBlur={syncCircuitFromCode}
                 language={editorLanguage}
                 setLanguage={setEditorLanguage}
             />
@@ -496,3 +499,5 @@ export default function CircuitComposer() {
     </div>
   );
 }
+
+    

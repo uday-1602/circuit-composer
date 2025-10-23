@@ -1,16 +1,15 @@
+
 "use client";
 
 import { useState, useTransition } from 'react';
 import type { CircuitState } from '@/types/circuit';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
-import { circuitToQasm, qasmToCircuit } from '@/lib/circuit-utils';
+import { circuitToQasm } from '@/lib/circuit-utils';
 import { generateCircuitFromDescription } from '@/ai/flows/generate-circuit-from-description';
 import { suggestNextGate } from '@/ai/flows/suggest-next-gate';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Wand2 } from 'lucide-react';
-import { Separator } from './ui/separator';
-import { v4 as uuidv4 } from 'uuid';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 interface FloatingAiAssistantProps {
   circuit: CircuitState;
-  onCircuitUpdate: (circuit: CircuitState) => void;
+  onCircuitUpdate: (qasmCode: string) => void;
 }
 
 export default function FloatingAiAssistant({ circuit, onCircuitUpdate }: FloatingAiAssistantProps) {
@@ -57,12 +56,7 @@ export default function FloatingAiAssistant({ circuit, onCircuitUpdate }: Floati
   const handleApplyGeneratedCircuit = () => {
     if (!generatedQasm) return;
     try {
-        const newCircuitState = qasmToCircuit(generatedQasm, circuit);
-        onCircuitUpdate({
-            ...circuit,
-            ...newCircuitState,
-            gates: newCircuitState.gates?.map(g => ({...g, id: uuidv4()})) || []
-        });
+        onCircuitUpdate(generatedQasm);
         toast({ title: "Circuit Applied", description: "AI-generated circuit has been built." });
         setIsOpen(false);
     } catch (error) {

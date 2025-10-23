@@ -4,14 +4,14 @@ import type { Gate, CircuitState, GateInstance } from '@/types/circuit';
 import { v4 as uuidv4 } from 'uuid';
 
 export const GATES: Gate[] = [
-  { name: 'H', label: 'H', color: 'bg-green-500', description: 'Hadamard Gate', qubits: 1 },
-  { name: 'X', label: 'X', color: 'bg-red-500', description: 'Pauli-X Gate (NOT)', qubits: 1 },
-  { name: 'Y', label: 'Y', color: 'bg-red-500', description: 'Pauli-Y Gate', qubits: 1 },
-  { name: 'Z', label: 'Z', color: 'bg-red-500', description: 'Pauli-Z Gate', qubits: 1 },
-  { name: 'S', label: 'S', color: 'bg-yellow-500', description: 'S Gate (Phase)', qubits: 1 },
-  { name: 'T', label: 'T', color: 'bg-yellow-500', description: 'T Gate (π/8)', qubits: 1 },
-  { name: 'CNOT', label: 'CX', color: 'bg-purple-500', description: 'Controlled-NOT Gate', qubits: 2 },
-  { name: 'Measure', label: 'M', color: 'bg-gray-600', description: 'Measurement', qubits: 1 },
+  { name: 'H', label: 'H', color: 'bg-primary', description: 'Hadamard Gate', qubits: 1 },
+  { name: 'X', label: 'X', color: 'bg-destructive', description: 'Pauli-X Gate (NOT)', qubits: 1 },
+  { name: 'Y', label: 'Y', color: 'bg-destructive', description: 'Pauli-Y Gate', qubits: 1 },
+  { name: 'Z', label: 'Z', color: 'bg-destructive', description: 'Pauli-Z Gate', qubits: 1 },
+  { name: 'S', label: 'S', color: 'bg-accent', description: 'S Gate (Phase)', qubits: 1 },
+  { name: 'T', label: 'T', color: 'bg-accent', description: 'T Gate (π/8)', qubits: 1 },
+  { name: 'CNOT', label: 'CX', color: 'bg-primary', description: 'Controlled-NOT Gate', qubits: 2 },
+  { name: 'Measure', label: 'M', color: 'bg-gate-gray', description: 'Measurement', qubits: 1 },
 ];
 
 function getSortedGatesByTimestep(circuit: CircuitState): GateInstance[][] {
@@ -95,52 +95,49 @@ export function qasmToCircuit(qasm: string, currentCircuit: CircuitState): Parti
 
   lines.forEach(line => {
     line = line.trim();
-    if (line.startsWith('//') || line.startsWith('#') || line === '') return;
+    if (line.startsWith('//') || line.startsWith('#') || line === '' || line.startsWith('OPENQASM') || line.startsWith('include') || line.startsWith('qreg') || line.startsWith('creg')) return;
 
     const cxMatch = line.match(/^cx\s+q\[(\d+)\],q\[(\d+)\];/);
+    const measureMatch = line.match(/^measure\s+q\[(\d+)\]\s*->\s*c\[(\d+)\];/);
     const singleGateMatch = line.match(/^(\w+)\s+q\[(\d+)\];$/);
-    const measureMatch = line.match(/^measure\s+q\[(\d+)\]\s*->\s*c\[\d+\];$/);
 
     let gateDef;
-    let newGate: Omit<GateInstance, 'id'> | null = null;
-    let controlQubit: number | undefined;
-    let targetQubit: number | undefined;
-
+    
     if (cxMatch) {
       gateDef = GATES.find(g => g.name === 'CNOT');
-      controlQubit = parseInt(cxMatch[1], 10);
-      targetQubit = parseInt(cxMatch[2], 10);
-      if (gateDef && controlQubit !== undefined && targetQubit !== undefined) {
+      const controlQubit = parseInt(cxMatch[1], 10);
+      const targetQubit = parseInt(cxMatch[2], 10);
+      if (gateDef && controlQubit < qubitCount && targetQubit < qubitCount) {
         const timestep = Math.max(qubitTimesteps[controlQubit], qubitTimesteps[targetQubit]);
-        newGate = { gate: gateDef, qubit: controlQubit, targetQubit, timestep };
-        qubitTimesteps[controlQubit] = timestep + 1;
-        qubitTimesteps[targetQubit] = timestep + 1;
+        const newGate = { id: uuidv4(), gate: gateDef, qubit: controlQubit, targetQubit, timestep };
+        newGates.push(newGate);
+        const nextTimestep = timestep + 1;
+        qubitTimesteps[controlQubit] = nextTimestep;
+        qubitTimesteps[targetQubit] = nextTimestep;
       }
+    } else if (measureMatch) {
+        gateDef = GATES.find(g => g.name === 'Measure');
+        const qubit = parseInt(measureMatch[1], 10);
+        if (gateDef && qubit < qubitCount) {
+            const timestep = qubitTimesteps[qubit];
+            const newGate = { id: uuidv4(), gate: gateDef, qubit, timestep };
+            newGates.push(newGate);
+            qubitTimesteps[qubit]++;
+        }
     } else if (singleGateMatch) {
       const gateName = singleGateMatch[1].toLowerCase();
       gateDef = GATES.find(g => g.name.toLowerCase() === gateName);
-      controlQubit = parseInt(singleGateMatch[2], 10);
-      if (gateDef && controlQubit !== undefined) {
-        const timestep = qubitTimesteps[controlQubit];
-        newGate = { gate: gateDef, qubit: controlQubit, timestep };
-        qubitTimesteps[controlQubit]++;
+      const qubit = parseInt(singleGateMatch[2], 10);
+      if (gateDef && qubit < qubitCount) {
+        const timestep = qubitTimesteps[qubit];
+        const newGate = { id: uuidv4(), gate: gateDef, qubit, timestep };
+        newGates.push(newGate);
+        qubitTimesteps[qubit]++;
       }
-    } else if (measureMatch) {
-      gateDef = GATES.find(g => g.name === 'Measure');
-      controlQubit = parseInt(measureMatch[1], 10);
-      if (gateDef && controlQubit !== undefined) {
-        const timestep = qubitTimesteps[controlQubit];
-        newGate = { gate: gateDef, qubit: controlQubit, timestep };
-        qubitTimesteps[controlQubit]++;
-      }
-    }
-
-    if (newGate) {
-      newGates.push({ ...newGate, id: uuidv4() });
     }
   });
 
-  const maxTimesteps = Math.max(...qubitTimesteps, currentCircuit.timesteps);
+  const maxTimesteps = Math.max(...qubitTimesteps, currentCircuit.timesteps, 25);
 
   return { qubits: qubitCount, gates: newGates, timesteps: maxTimesteps };
 }
@@ -166,30 +163,29 @@ export function qiskitToCircuit(qiskit: string, currentCircuit: CircuitState): P
 
         let gateDef;
         let newGate: Omit<GateInstance, 'id'> | null = null;
-        let controlQubit: number | undefined;
-        let targetQubit: number | undefined;
 
         if (twoQubitGateMatch) {
             const gateName = twoQubitGateMatch[1].toUpperCase();
             gateDef = GATES.find(g => g.label === gateName || g.name === gateName);
-            controlQubit = parseInt(twoQubitGateMatch[2], 10);
-            targetQubit = parseInt(twoQubitGateMatch[3], 10);
+            const controlQubit = parseInt(twoQubitGateMatch[2], 10);
+            const targetQubit = parseInt(twoQubitGateMatch[3], 10);
 
-            if (gateDef && controlQubit !== undefined && targetQubit !== undefined) {
+            if (gateDef && controlQubit < qubitCount && targetQubit < qubitCount) {
                 const timestep = Math.max(qubitTimesteps[controlQubit], qubitTimesteps[targetQubit]);
                 newGate = { gate: gateDef, qubit: controlQubit, targetQubit, timestep };
-                qubitTimesteps[controlQubit] = timestep + 1;
-                qubitTimesteps[targetQubit] = timestep + 1;
+                const nextTimestep = timestep + 1;
+                qubitTimesteps[controlQubit] = nextTimestep;
+                qubitTimesteps[targetQubit] = nextTimestep;
             }
         } else if (singleQubitGateMatch) {
             const gateName = singleQubitGateMatch[1].toUpperCase();
             gateDef = GATES.find(g => g.name === gateName || g.label === gateName);
-            controlQubit = parseInt(singleQubitGateMatch[2], 10);
+            const qubit = parseInt(singleQubitGateMatch[2], 10);
 
-            if (gateDef && controlQubit !== undefined) {
-                const timestep = qubitTimesteps[controlQubit];
-                newGate = { gate: gateDef, qubit: controlQubit, timestep };
-                qubitTimesteps[controlQubit]++;
+            if (gateDef && qubit < qubitCount) {
+                const timestep = qubitTimesteps[qubit];
+                newGate = { gate: gateDef, qubit, timestep };
+                qubitTimesteps[qubit]++;
             }
         }
 
@@ -198,7 +194,7 @@ export function qiskitToCircuit(qiskit: string, currentCircuit: CircuitState): P
         }
     });
 
-    const maxTimesteps = Math.max(...qubitTimesteps, currentCircuit.timesteps);
+    const maxTimesteps = Math.max(...qubitTimesteps, currentCircuit.timesteps, 25);
 
     return { qubits: qubitCount, gates: newGates, timesteps: maxTimesteps };
 }

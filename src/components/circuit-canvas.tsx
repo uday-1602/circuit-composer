@@ -57,16 +57,23 @@ export default function CircuitCanvas({ circuit, onDrop, onDragOver, removeGate,
 
         {/* Qubit Labels and Lanes */}
         {Array.from({ length: qubits }).map((_, i) => (
+          // **NEW CONTAINER DIV:** ensures the label is centered in the 4rem grid cell
           <div 
-            key={`qubit-label-${i}`} 
-            className={cn(
-              "flex items-center justify-center font-mono text-lg font-bold sticky left-0 bg-card z-20 cursor-pointer rounded-md",
-              selectedQubit === i && "bg-primary/20 ring-2 ring-primary"
-            )}
-            style={{ gridRow: i + 1 }}
-            onClick={() => onSelectQubit(selectedQubit === i ? null : i)}
+            key={`qubit-lane-${i}`} 
+            style={{ gridRow: i + 1 }} 
+            className="flex items-center justify-center sticky left-0 bg-card z-20"
+          >
+            {/* **INNER LABEL DIV:** Enforces a smaller size (3rem) and reduced text/padding */}
+            <div 
+                key={`qubit-label-${i}`} 
+                className={cn(
+                    "flex items-center justify-center font-mono **text-base** font-bold cursor-pointer rounded-md **w-12 h-12 p-1**", // w-12 h-12 is 3rem
+                    selectedQubit === i && "bg-primary/20 ring-2 ring-primary"
+                )}
+                onClick={() => onSelectQubit(selectedQubit === i ? null : i)}
             >
-            q[{i}]
+                q[{i}]
+            </div>
           </div>
         ))}
         {Array.from({ length: qubits * timesteps }).map((_, index) => {

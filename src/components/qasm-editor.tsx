@@ -8,18 +8,13 @@ import type { EditorLanguage } from "@/types/circuit";
 
 interface QasmEditorProps {
     code: string;
-    setCode: (code: string) => void;
-    setIsTyping: (isTyping: boolean) => void;
+    onCodeChange: (code: string) => void;
+    onBlur: () => void;
     language: EditorLanguage;
     setLanguage: (language: EditorLanguage) => void;
 }
 
-export default function QasmEditor({ code, setCode, setIsTyping, language, setLanguage }: QasmEditorProps) {
-    
-    const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setIsTyping(true);
-        setCode(e.target.value);
-    }
+export default function QasmEditor({ code, onCodeChange, onBlur, language, setLanguage }: QasmEditorProps) {
     
     return (
         <Card className="flex-1 flex flex-col">
@@ -45,8 +40,8 @@ export default function QasmEditor({ code, setCode, setIsTyping, language, setLa
             <CardContent className="flex-1 flex">
                 <Textarea
                     value={code}
-                    onChange={handleCodeChange}
-                    onBlur={() => setIsTyping(false)}
+                    onChange={(e) => onCodeChange(e.target.value)}
+                    onBlur={onBlur}
                     placeholder={language === 'qasm' ? 'OPENQASM 2.0;' : '# Qiskit code'}
                     className="font-code text-xs w-full h-full resize-none"
                 />

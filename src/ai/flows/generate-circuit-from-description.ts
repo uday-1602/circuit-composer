@@ -8,8 +8,8 @@
  * - GenerateCircuitFromDescriptionOutput - The return type for the generateCircuitFromDescription function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const GenerateCircuitFromDescriptionInputSchema = z.object({
   description: z.string().describe('A natural language description of the desired quantum circuit functionality.'),
@@ -27,8 +27,8 @@ export async function generateCircuitFromDescription(input: GenerateCircuitFromD
 
 const prompt = ai.definePrompt({
   name: 'generateCircuitFromDescriptionPrompt',
-  input: {schema: GenerateCircuitFromDescriptionInputSchema},
-  output: {schema: GenerateCircuitFromDescriptionOutputSchema},
+  input: { schema: GenerateCircuitFromDescriptionInputSchema },
+  output: { schema: GenerateCircuitFromDescriptionOutputSchema },
   prompt: `You are a quantum circuit design assistant. Your task is to generate a quantum circuit diagram, as QASM 2.0 code, based on a natural language description of the desired circuit functionality.
 
 You MUST adhere to the following strict QASM 2.0 format:
@@ -46,7 +46,9 @@ creg c[2];
 h q[0];
 cx q[0],q[1];
 
-Description: {{{description}}}
+Description: {{description}}
+
+IMPORTANT: CORE OUTPUT MUST BE ONLY THE JSON OBJECT matching the schema. DO NOT WRAP IN MARKDOWN CODE BLOCKS. DO NOT ADD ANY PREAMBLE OR EXPLANATION.
 `,
 });
 
@@ -57,7 +59,7 @@ const generateCircuitFromDescriptionFlow = ai.defineFlow(
     outputSchema: GenerateCircuitFromDescriptionOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const { output } = await prompt(input);
     return output!;
   }
 );

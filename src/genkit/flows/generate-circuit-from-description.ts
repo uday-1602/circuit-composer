@@ -8,7 +8,7 @@
  * - GenerateCircuitFromDescriptionOutput - The return type for the generateCircuitFromDescription function.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai } from '@/genkit/genkit';
 import { z } from 'genkit';
 
 const GenerateCircuitFromDescriptionInputSchema = z.object({

@@ -26,12 +26,12 @@ const ProbabilityChart: React.FC<ProbabilityChartProps> = ({ data }) => {
           />
           <Bar dataKey="probability" radius={[4, 4, 0, 0]}>
             <LabelList
-                dataKey="probability"
-                position="top"
-                formatter={(value: number) => `${(value * 100).toFixed(1)}%`}
-                className="fill-foreground"
-                fontSize={12}
-             />
+              dataKey="probability"
+              position="top"
+              formatter={(value: any) => `${(Number(value) * 100).toFixed(1)}%`}
+              className="fill-foreground"
+              fontSize={12}
+            />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -41,4 +41,3 @@ const ProbabilityChart: React.FC<ProbabilityChartProps> = ({ data }) => {
 
 export default ProbabilityChart;
 
-    

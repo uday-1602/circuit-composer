@@ -8,7 +8,7 @@
  * - SuggestNextGateOutput - The return type for the suggestNextGate function.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai } from '@/genkit/genkit';
 import { z } from 'genkit';
 
 const SuggestNextGateInputSchema = z.object({

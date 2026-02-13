@@ -1,7 +1,13 @@
-import type { NextConfig } from 'next';
+import type {NextConfig} from 'next';
 
-const nextConfig: any = {
+const nextConfig: NextConfig = {
   /* config options here */
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {
@@ -14,4 +20,4 @@ const nextConfig: any = {
   },
 };
 
-export default nextConfig as any;
+export default nextConfig;

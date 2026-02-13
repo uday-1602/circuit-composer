@@ -6,8 +6,8 @@ import type { CircuitState } from '@/types/circuit';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { circuitToQasm } from '@/lib/circuit-utils';
-import { generateCircuitFromDescription } from '@/genkit/flows/generate-circuit-from-description';
-import { suggestNextGate } from '@/genkit/flows/suggest-next-gate';
+import { generateCircuitFromDescription } from '@/ai/flows/generate-circuit-from-description';
+import { suggestNextGate } from '@/ai/flows/suggest-next-gate';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Wand2 } from 'lucide-react';
 import {
@@ -39,36 +39,36 @@ export default function FloatingAiAssistant({ circuit, onCircuitUpdate }: Floati
 
   const handleGenerateCircuit = () => {
     if (!description) {
-      toast({ title: 'Error', description: 'Please provide a circuit description.', variant: 'destructive' });
-      return;
+        toast({ title: 'Error', description: 'Please provide a circuit description.', variant: 'destructive' });
+        return;
     }
     startGenerating(async () => {
-      const result = await generateCircuitFromDescription({ description });
-      if (result.circuitDiagram) {
-        setGeneratedQasm(result.circuitDiagram);
-        toast({ title: 'Circuit Generated', description: 'QASM code has been generated. You can now apply it.' });
-      } else {
-        toast({ title: 'Error', description: 'Could not generate circuit.', variant: 'destructive' });
-      }
+        const result = await generateCircuitFromDescription({ description });
+        if (result.circuitDiagram) {
+            setGeneratedQasm(result.circuitDiagram);
+            toast({ title: 'Circuit Generated', description: 'QASM code has been generated. You can now apply it.' });
+        } else {
+            toast({ title: 'Error', description: 'Could not generate circuit.', variant: 'destructive' });
+        }
     });
   };
 
   const handleApplyGeneratedCircuit = () => {
     if (!generatedQasm) return;
     try {
-      onCircuitUpdate(generatedQasm);
-      toast({ title: "Circuit Applied", description: "AI-generated circuit has been built." });
-      setIsOpen(false);
+        onCircuitUpdate(generatedQasm);
+        toast({ title: "Circuit Applied", description: "AI-generated circuit has been built." });
+        setIsOpen(false);
     } catch (error) {
-      console.error("Failed to parse generated QASM:", error);
-      toast({ title: 'Error', description: 'Failed to parse the generated QASM code.', variant: 'destructive' });
+        console.error("Failed to parse generated QASM:", error);
+        toast({ title: 'Error', description: 'Failed to parse the generated QASM code.', variant: 'destructive' });
     }
   }
 
   const handleSuggestGate = () => {
     if (!targetFunction) {
-      toast({ title: 'Error', description: 'Please provide a target function.', variant: 'destructive' });
-      return;
+        toast({ title: 'Error', description: 'Please provide a target function.', variant: 'destructive' });
+        return;
     }
     const currentQasm = circuitToQasm(circuit);
     if (!currentQasm.trim() || circuit.gates.length === 0) {
@@ -77,13 +77,13 @@ export default function FloatingAiAssistant({ circuit, onCircuitUpdate }: Floati
     }
 
     startSuggesting(async () => {
-      const result = await suggestNextGate({ circuitState: currentQasm, targetFunction });
-      if (result.suggestion) {
-        setSuggestion(result.suggestion);
-        toast({ title: 'Suggestion Ready', description: 'AI has provided an optimization suggestion.' });
-      } else {
-        toast({ title: 'Error', description: 'Could not generate suggestion.', variant: 'destructive' });
-      }
+        const result = await suggestNextGate({ circuitState: currentQasm, targetFunction });
+        if (result.suggestion) {
+            setSuggestion(result.suggestion);
+            toast({ title: 'Suggestion Ready', description: 'AI has provided an optimization suggestion.' });
+        } else {
+            toast({ title: 'Error', description: 'Could not generate suggestion.', variant: 'destructive' });
+        }
     });
   }
 
@@ -105,64 +105,64 @@ export default function FloatingAiAssistant({ circuit, onCircuitUpdate }: Floati
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto p-1">
-          {/* AI Circuit Generation */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Generate Circuit</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <Textarea
-                placeholder="e.g., A Bell state circuit for two qubits."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="mb-2 font-code"
-              />
-              <Button onClick={handleGenerateCircuit} disabled={isGenerating} className="w-full">
-                {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Generate QASM
-              </Button>
-              {generatedQasm && (
-                <>
-                  <Textarea
-                    value={generatedQasm}
-                    readOnly
-                    className="h-32 font-code text-xs bg-muted"
-                  />
-                  <Button onClick={handleApplyGeneratedCircuit} variant="default">
-                    Apply to Circuit
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
+            {/* AI Circuit Generation */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Generate Circuit</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4">
+                    <Textarea 
+                        placeholder="e.g., A Bell state circuit for two qubits."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="mb-2 font-code"
+                    />
+                    <Button onClick={handleGenerateCircuit} disabled={isGenerating} className="w-full">
+                        {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Generate QASM
+                    </Button>
+                    {generatedQasm && (
+                        <>
+                         <Textarea
+                            value={generatedQasm}
+                            readOnly
+                            className="h-32 font-code text-xs bg-muted"
+                         />
+                         <Button onClick={handleApplyGeneratedCircuit} variant="default">
+                            Apply to Circuit
+                         </Button>
+                        </>
+                    )}
+                </CardContent>
+            </Card>
 
-          {/* AI Gate Suggestion */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Suggest Next Gate</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <Textarea
-                placeholder="Target: e.g., 'maximize entanglement' or 'correct a phase flip error'"
-                value={targetFunction}
-                onChange={(e) => setTargetFunction(e.target.value)}
-                className="mb-2 font-code"
-              />
-              <Button onClick={handleSuggestGate} disabled={isSuggesting} className="w-full">
-                {isSuggesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Suggest
-              </Button>
-              {suggestion && (
-                <div className="mt-2 p-2 bg-muted rounded-md text-sm">
-                  <p className="font-semibold">Suggestion:</p>
-                  <p className="font-code whitespace-pre-wrap">{suggestion}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            {/* AI Gate Suggestion */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Suggest Next Gate</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4">
+                     <Textarea 
+                        placeholder="Target: e.g., 'maximize entanglement' or 'correct a phase flip error'"
+                        value={targetFunction}
+                        onChange={(e) => setTargetFunction(e.target.value)}
+                        className="mb-2 font-code"
+                    />
+                    <Button onClick={handleSuggestGate} disabled={isSuggesting} className="w-full">
+                        {isSuggesting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Suggest
+                    </Button>
+                    {suggestion && (
+                        <div className="mt-2 p-2 bg-muted rounded-md text-sm">
+                            <p className="font-semibold">Suggestion:</p>
+                            <p className="font-code whitespace-pre-wrap">{suggestion}</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
